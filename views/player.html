@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOA | Secure Online Album - Video Player</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#007AFF',
+                        primaryHover: '#0056CC',
+                        surface: '#F5F5F7',
+                        border: '#D2D2D7',
+                        text: '#1D1D1F',
+                        textSecondary: '#6E6E73',
+                    },
+                    boxShadow: {
+                        'soft': '0 8px 32px rgba(0, 0, 0, 0.08)',
+                        'float': '0 12px 40px rgba(0, 0, 0, 0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background:
+                linear-gradient(120deg, #020617 0%, #08111f 45%, #111827 100%);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+        }
+
+        * { letter-spacing: 0; }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+            background-size: 44px 44px;
+            opacity: 0.28;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 30px 90px rgba(0,0,0,0.45);
+        }
+
+        .video-container.theater-mode {
+            border-radius: 0;
+            box-shadow: none;
+            width: min(100vw, 1280px);
+            margin-left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .video-container video {
+            width: 100%;
+            display: block;
+            transition: transform 0.2s ease;
+        }
+
+        .controls-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 60px 16px 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .controls-overlay,
+        .video-container.paused .controls-overlay {
+            opacity: 1;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: height 0.2s ease;
+        }
+
+        .progress-bar-container:hover {
+            height: 6px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #007AFF;
+            border-radius: 2px;
+            width: 0%;
+            position: relative;
+            transition: width 0.1s linear;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -3px;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .progress-bar-container:hover .progress-bar::after {
+            opacity: 1;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #fff;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .big-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .big-play-btn:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .big-play-btn.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-spinner.hidden {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .video-list-item {
+            transition: all 0.2s ease;
+        }
+
+        .video-list-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .video-list-item.active {
+            background: rgba(0, 122, 255, 0.15);
+        }
+
+        .download-card {
+            background: rgba(255, 255, 255, 0.075);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            box-shadow: 0 20px 64px rgba(0,0,0,0.24);
+        }
+
+        .pdf-viewer {
+            background: rgba(8,17,31,0.92);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.35);
+        }
+
+        .pdf-toolbar {
+            background: rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pdf-stage {
+            min-height: 72vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow: auto;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.035), rgba(0,167,199,0.05));
+        }
+
+        .pdf-stage canvas {
+            background: #fff;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+            max-width: 100%;
+            height: auto;
+        }
+
+        .secure-watermark {
+            position: absolute;
+            inset: auto 18px 18px auto;
+            z-index: 20;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.45);
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 11px;
+            letter-spacing: 0;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+        }
+
+        .pdf-stage-wrap {
+            position: relative;
+        }
+
+        .pdf-stage-wrap::after {
+            content: attr(data-watermark);
+            position: absolute;
+            right: 24px;
+            bottom: 18px;
+            color: rgba(15, 23, 42, 0.22);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .pdf-btn {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            transition: background 0.2s ease;
+        }
+
+        .pdf-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .pdf-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .mini-input, .mini-select {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 10px;
+            outline: none;
+        }
+
+        .mini-input {
+            width: 76px;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #08111f 0%, #123c4b 62%, #b8892f 170%);
+            transition: all 0.3s ease;
+            box-shadow: 0 14px 34px rgba(0,0,0,0.25);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 46px rgba(0, 0, 0, 0.36);
+        }
+
+        .btn-download:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .rounded-2xl, .rounded-xl, .rounded-lg {
+            border-radius: 8px !important;
+        }
+
+        nav {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 34px rgba(0,0,0,0.18);
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
+        }
+
+        #userDashboard .rounded-xl {
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @media (max-width: 720px) {
+            nav { padding-left: 14px; padding-right: 14px; }
+            main { padding-left: 12px; padding-right: 12px; }
+            nav a span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .pdf-toolbar { align-items: stretch; }
+            .pdf-toolbar > div { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            .pdf-stage { min-height: 62vh; padding: 10px; }
+            .volume-slider { width: 54px; }
+            .controls-overlay { padding: 46px 10px 10px; }
+            .controls-overlay > .flex { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+            .controls-overlay > .flex > div { flex-wrap: wrap; }
+            .mini-select { max-width: 72px; }
+            #userDashboard .flex.items-center.justify-between { align-items: flex-start; }
+            #userDashboard .flex.flex-wrap.gap-2 button { flex: 1 1 120px; }
+            .secure-watermark { right: 10px; bottom: 10px; max-width: 72%; overflow: hidden; text-overflow: ellipsis; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="flex items-center justify-between px-6 py-4 bg-black/50 backdrop-blur-md sticky top-0 z-50">
+        <a href="/" class="flex items-center gap-2 text-white font-semibold">
+            <span>SOA | Secure Online Album</span>
+        </a>
+        <div class="flex items-center gap-3 text-sm text-gray-400">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+            </svg>
+            <span id="userEmail">User</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto px-4 py-8">
+        <div class="download-card rounded-2xl p-4 mb-6 fade-in">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                <div>
+                    <p class="text-gray-500">User ID</p>
+                    <p class="text-white font-medium" id="sessionUserId">-</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Customer ID</p>
+                    <p class="text-white font-medium" id="sessionCustomerId">-</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Albums</p>
+                    <p class="text-white font-medium" id="sessionAlbums">0</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Videos</p>
+                    <p class="text-white font-medium" id="sessionVideos">0</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">PDF Albums</p>
+                    <p class="text-white font-medium" id="sessionPdfs">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Header -->
+        <div class="mb-6 fade-in">
+            <h1 id="videoTitle" class="text-2xl font-semibold text-white mb-1">Select a File</h1>
+            <p id="videoMeta" class="text-sm text-gray-400">Choose a video or PDF album from the list below</p>
+        </div>
+
+        <div class="download-card rounded-2xl p-4 mb-6 fade-in" id="userDashboard">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">My SOA Dashboard</h2>
+                    <p class="text-sm text-gray-400">Favorites, recent files, login history, tickets and download approvals</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button class="pdf-btn" id="favoriteBtn" type="button" disabled>Favorite</button>
+                    <button class="pdf-btn" id="shareBtn" type="button" disabled>Share View Link</button>
+                    <button class="pdf-btn" id="supportBtn" type="button">Request Support</button>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-4 gap-3 text-sm">
+                <div class="rounded-xl bg-white/5 p-3">
+                    <p class="text-gray-400 mb-2">Favorites</p>
+                    <div id="favoritesList" class="space-y-2 text-gray-300">No favorites yet</div>
+                </div>
+                <div class="rounded-xl bg-white/5 p-3">
+                    <p class="text-gray-400 mb-2">Recently Viewed</p>
+                    <div id="recentList" class="space-y-2 text-gray-300">No recent files yet</div>
+                </div>
+                <div class="rounded-xl bg-white/5 p-3">
+                    <p class="text-gray-400 mb-2">Login History</p>
+                    <div id="loginHistoryList" class="space-y-2 text-gray-300">No login history yet</div>
+                </div>
+                <div class="rounded-xl bg-white/5 p-3">
+                    <p class="text-gray-400 mb-2">My Tickets</p>
+                    <div id="ticketList" class="space-y-2 text-gray-300">No tickets yet</div>
+                </div>
+            </div>
+            <div class="mt-3 text-xs text-primary break-all hidden" id="shareResult"></div>
+        </div>
+
+        <div class="pdf-viewer mb-8 fade-in hidden" id="pdfViewer">
+            <div class="pdf-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div class="flex items-center gap-2">
+                    <button class="pdf-btn" id="pdfPrevBtn" type="button">Prev</button>
+                    <button class="pdf-btn" id="pdfNextBtn" type="button">Next</button>
+                    <span class="text-sm text-gray-300 ml-2" id="pdfPageInfo">Page 1 / 1</span>
+                    <input class="mini-input" id="pdfJumpInput" type="number" min="1" value="1" aria-label="Jump to page">
+                    <button class="pdf-btn" id="pdfJumpBtn" type="button">Go</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="pdf-btn" id="pdfZoomOutBtn" type="button">-</button>
+                    <span class="text-sm text-gray-300 min-w-[56px] text-center" id="pdfZoomInfo">100%</span>
+                    <button class="pdf-btn" id="pdfZoomInBtn" type="button">+</button>
+                    <button class="pdf-btn" id="pdfRotateBtn" type="button">Rotate</button>
+                </div>
+            </div>
+            <div class="pdf-stage pdf-stage-wrap" id="pdfStage">
+                <canvas id="pdfCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Video Player -->
+        <div class="video-container rounded-2xl shadow-float mb-8 fade-in" id="videoWrapper">
+            <video id="videoPlayer" playsinline>
+                Your browser does not support the video tag.
+            </video>
+            <div class="secure-watermark" id="videoWatermark">SOA</div>
+
+            <!-- Loading Spinner -->
+            <div class="loading-spinner hidden" id="loadingSpinner"></div>
+
+            <!-- Big Play Button -->
+            <button class="big-play-btn hidden" id="bigPlayBtn">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+
+            <!-- Custom Controls -->
+            <div class="controls-overlay">
+                <div class="progress-bar-container" id="progressContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <button class="control-btn" id="playPauseBtn">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" id="playIcon">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <button class="control-btn" id="muteBtn">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" id="volumeIcon">
+                                    <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+                        </div>
+                        <span class="text-sm text-white/80 ml-2" id="timeDisplay">0:00 / 0:00</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-1 rounded-lg bg-white/10 text-white/70" id="qualityLabel">Auto HD</span>
+                        <select class="mini-select text-sm" id="speedSelect" title="Playback speed">
+                            <option value="0.75">0.75x</option>
+                            <option value="1" selected>1x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2x</option>
+                        </select>
+                        <button class="control-btn" id="theaterBtn" title="Theater mode">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm2 1v8h10V6H5z"/></svg>
+                        </button>
+                        <button class="control-btn" id="pipBtn" title="Picture in Picture">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v2h1v-2h-1zm-2-2H7v4h6v-4zm2 0h1V9h-1v2zm1-4V5h-1v2h1zM5 5v2H4V5h1zm0 4H4v2h1V9zm-1 4h1v2H4v-2z"/>
+                            </svg>
+                        </button>
+                        <button class="control-btn" id="rotateLeftBtn" title="Rotate left">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.707 3.293a1 1 0 010 1.414L7.414 6H11a5 5 0 11-4.472 2.764 1 1 0 111.789.894A3 3 0 1011 8H7.414l1.293 1.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <button class="control-btn" id="rotateRightBtn" title="Rotate right">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.293 3.293a1 1 0 000 1.414L12.586 6H9a5 5 0 104.472 2.764 1 1 0 10-1.789.894A3 3 0 119 8h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 00-1.414 0z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <button class="control-btn" id="fullscreenBtn" title="Fullscreen">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5.414l3.293 3.293a1 1 0 01-1.414 1.414L4 6.414V8a1 1 0 01-2 0V4zm12 1a1 1 0 100-2h-4a1 1 0 000 2h2.586l-3.293 3.293a1 1 0 001.414 1.414L16 6.414V8a1 1 0 002 0V4h-3z" clip-rule="evenodd"/>
+                                <path fill-rule="evenodd" d="M3 16a1 1 0 001 1h4a1 1 0 000-2H5.414l3.293-3.293a1 1 0 00-1.414-1.414L4 13.586V12a1 1 0 00-2 0v4zm12 1a1 1 0 01-1 1h-4a1 1 0 010-2h2.586l-3.293-3.293a1 1 0 011.414-1.414L16 13.586V12a1 1 0 012 0v4h-3z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="download-card rounded-2xl p-6 mb-8 fade-in" id="downloadSection">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h3 class="text-lg font-medium text-white mb-1 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download File
+                    </h3>
+                    <p class="text-sm text-gray-400" id="downloadCopy">Request admin approval for a secure download link</p>
+                </div>
+                <button class="btn-download px-6 py-3 rounded-xl text-white font-medium flex items-center gap-2" id="requestDownloadBtn" disabled>
+                    <span class="btn-text">Request Approval</span>
+                    <div class="btn-loader spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div class="fade-in">
+            <h2 class="text-lg font-semibold text-white mb-4">Files in this Album</h2>
+            <div class="space-y-2" id="videoList">
+                <div class="flex items-center justify-center py-12 text-gray-500">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <div id="supportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-[9998] items-center justify-center p-4">
+        <form id="supportForm" class="download-card rounded-2xl p-6 w-full max-w-lg">
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                    <h2 class="text-xl font-semibold text-white">Request Support</h2>
+                    <p class="text-sm text-gray-400">Send a correction or help request for your current album/file</p>
+                </div>
+                <button type="button" class="pdf-btn" id="closeSupportModal">Close</button>
+            </div>
+            <label class="block mb-4">
+                <span class="block text-sm text-gray-300 mb-2">Subject</span>
+                <input name="subject" class="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/10 outline-none text-white" placeholder="Wrong name, missing file, access issue..." required>
+            </label>
+            <label class="block mb-5">
+                <span class="block text-sm text-gray-300 mb-2">Message</span>
+                <textarea name="message" rows="4" class="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/10 outline-none text-white" placeholder="Write the details here" required></textarea>
+            </label>
+            <button class="btn-download px-5 py-3 rounded-xl text-white font-medium" type="submit">Send Request</button>
+        </form>
+    </div>
+
+    <script>
+        // State
+        let currentVideo = null;
+        let videos = [];
+        let isDownloadRequested = false;
+        let videoRotation = 0;
+        let pdfDoc = null;
+        let pdfPageNum = 1;
+        let pdfScale = 1.1;
+        let pdfRotation = 0;
+        let pdfRendering = false;
+        let pendingPdfPage = null;
+        let sessionInfo = {};
+        let activity = { favorites: [], recent: [], loginHistory: [], supportRequests: [] };
+        let favoriteIds = new Set();
+        let recentById = new Map();
+        let recentSaveTimer = null;
+
+        // DOM Elements
+        const video = document.getElementById('videoPlayer');
+        const videoWrapper = document.getElementById('videoWrapper');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const bigPlayBtn = document.getElementById('bigPlayBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const pipBtn = document.getElementById('pipBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const requestDownloadBtn = document.getElementById('requestDownloadBtn');
+        const videoListEl = document.getElementById('videoList');
+        const pdfViewer = document.getElementById('pdfViewer');
+        const pdfCanvas = document.getElementById('pdfCanvas');
+        const pdfPrevBtn = document.getElementById('pdfPrevBtn');
+        const pdfNextBtn = document.getElementById('pdfNextBtn');
+        const pdfZoomOutBtn = document.getElementById('pdfZoomOutBtn');
+        const pdfZoomInBtn = document.getElementById('pdfZoomInBtn');
+        const pdfRotateBtn = document.getElementById('pdfRotateBtn');
+        const pdfJumpInput = document.getElementById('pdfJumpInput');
+        const pdfJumpBtn = document.getElementById('pdfJumpBtn');
+        const pdfPageInfo = document.getElementById('pdfPageInfo');
+        const pdfZoomInfo = document.getElementById('pdfZoomInfo');
+        const pdfStage = document.getElementById('pdfStage');
+        const downloadCopy = document.getElementById('downloadCopy');
+        const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+        const rotateRightBtn = document.getElementById('rotateRightBtn');
+        const speedSelect = document.getElementById('speedSelect');
+        const qualityLabel = document.getElementById('qualityLabel');
+        const theaterBtn = document.getElementById('theaterBtn');
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const supportBtn = document.getElementById('supportBtn');
+        const shareResult = document.getElementById('shareResult');
+        const supportModal = document.getElementById('supportModal');
+        const supportForm = document.getElementById('supportForm');
+
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // Check authentication on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const [sessionResponse, response, activityResponse] = await Promise.all([
+                    fetch('/api/session'),
+                    fetch('/api/videos'),
+                    fetch('/api/user/activity')
+                ]);
+                const sessionData = await sessionResponse.json();
+                const data = await response.json();
+                const activityData = activityResponse.ok ? await activityResponse.json() : {};
+
+                if (response.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                sessionInfo = sessionData;
+                activity = {
+                    favorites: activityData.favorites || [],
+                    recent: activityData.recent || [],
+                    loginHistory: activityData.loginHistory || [],
+                    supportRequests: activityData.supportRequests || []
+                };
+                favoriteIds = new Set(activity.favorites.map(item => item.mediaId));
+                recentById = new Map(activity.recent.map(item => [item.mediaId, item]));
+                videos = (data.videos || []).map(item => ({ ...item, type: item.type || 'video' }));
+                document.getElementById('userEmail').textContent = sessionData.email || 'User';
+                document.getElementById('sessionUserId').textContent = sessionData.userId || '-';
+                document.getElementById('sessionCustomerId').textContent = sessionData.customerId || '-';
+                document.getElementById('sessionAlbums').textContent = sessionData.albumCount || 0;
+                document.getElementById('sessionVideos').textContent = sessionData.videoCount || 0;
+                document.getElementById('sessionPdfs').textContent = sessionData.pdfCount || 0;
+                document.getElementById('videoWatermark').textContent = `SOA · ${sessionData.fullEmail || sessionData.email || 'viewer'}`;
+                pdfStage.dataset.watermark = `SOA · ${sessionData.fullEmail || sessionData.email || 'viewer'}`;
+                if (sessionData.readOnly) {
+                    favoriteBtn.disabled = true;
+                    shareBtn.disabled = true;
+                    supportBtn.disabled = true;
+                    document.getElementById('userDashboard').classList.add('opacity-70');
+                }
+                renderUserDashboard();
+                
+                if (videos.length === 0) {
+                    videoListEl.innerHTML = '<div class="text-center py-12 text-gray-500">No files found</div>';
+                    return;
+                }
+
+                renderVideoList();
+                loadVideo(videos[0].id);
+
+            } catch (error) {
+                console.error('Failed to load files:', error);
+                showToast('error', 'Failed to load files');
+            }
+        });
+
+        // Render video list
+        function renderVideoList() {
+            videoListEl.innerHTML = videos.map(video => `
+                <div class="video-list-item flex items-center gap-4 p-4 rounded-xl cursor-pointer ${currentVideo && currentVideo.id === video.id ? 'active' : ''}" 
+                     onclick="loadVideo('${video.id}')" data-id="${video.id}">
+                    <div class="w-10 h-10 rounded-lg ${video.type === 'pdf' ? 'bg-red-500/20' : 'bg-primary/20'} flex items-center justify-center flex-shrink-0">
+                        ${video.type === 'pdf'
+                            ? '<svg class="w-5 h-5 text-red-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8.414a2 2 0 00-.586-1.414L11 2.586A2 2 0 009.586 2H4zm5 1.5V8a1 1 0 001 1h4.5L9 3.5z" clip-rule="evenodd"/></svg>'
+                            : '<svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>'}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-medium truncate">${escapeHtml(video.title)}</p>
+                        <p class="text-sm text-gray-400">${favoriteIds.has(video.id) ? 'Favorite · ' : ''}${recentById.has(video.id) ? 'Recent · ' : ''}${video.type === 'pdf' ? 'PDF album' : 'Video'} · ${escapeHtml(video.size)} · ${escapeHtml(video.albumId || '')}</p>
+                    </div>
+                    <svg class="w-5 h-5 ${favoriteIds.has(video.id) ? 'text-yellow-300' : 'text-gray-500'}" fill="${favoriteIds.has(video.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                        ${favoriteIds.has(video.id)
+                            ? '<path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.52 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.889a1 1 0 00-.364 1.118l1.52 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0L7.438 19.9c-.783.57-1.838-.196-1.538-1.118l1.52-4.674a1 1 0 00-.364-1.118L3.08 10.1c-.783-.57-.38-1.81.588-1.81h4.915a1 1 0 00.95-.69l1.516-4.674z"/>'
+                            : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />'}
+                    </svg>
+                </div>
+            `).join('');
+        }
+
+        function renderUserDashboard() {
+            const makeItem = (item) => `<button class="block w-full text-left hover:text-white truncate" onclick="loadVideo('${item.mediaId}')">${escapeHtml(item.title)} <span class="text-gray-500">· ${escapeHtml(item.type || '')}</span></button>`;
+            document.getElementById('favoritesList').innerHTML = activity.favorites.length
+                ? activity.favorites.slice(0, 5).map(makeItem).join('')
+                : 'No favorites yet';
+            document.getElementById('recentList').innerHTML = activity.recent.length
+                ? activity.recent.slice(0, 5).map(item => `<button class="block w-full text-left hover:text-white truncate" onclick="loadVideo('${item.mediaId}')">${escapeHtml(item.title)} <span class="text-gray-500">· ${item.type === 'pdf' ? `Page ${item.page || 1}` : formatTime(item.lastTime || 0)}</span></button>`).join('')
+                : 'No recent files yet';
+            document.getElementById('loginHistoryList').innerHTML = activity.loginHistory.length
+                ? activity.loginHistory.slice(0, 4).map(item => `<div>${new Date(item.createdAt).toLocaleString()} <span class="text-gray-500">· ${escapeHtml(item.accessMode || 'login')}</span></div>`).join('')
+                : 'No login history yet';
+            document.getElementById('ticketList').innerHTML = activity.supportRequests.length
+                ? activity.supportRequests.slice(0, 5).map(item => `<div class="truncate">${escapeHtml(item.requestType === 'download' ? 'Download' : 'Support')}: ${escapeHtml(item.mediaTitle || item.subject || 'Ticket')} <span class="text-gray-500">· ${escapeHtml(item.status || 'open')}</span></div>`).join('')
+                : 'No tickets yet';
+            updateFavoriteButton();
+        }
+
+        function updateFavoriteButton() {
+            if (!currentVideo) {
+                favoriteBtn.disabled = true;
+                favoriteBtn.textContent = 'Favorite';
+                return;
+            }
+            favoriteBtn.disabled = !!sessionInfo.readOnly;
+            favoriteBtn.textContent = favoriteIds.has(currentVideo.id) ? 'Favorited' : 'Favorite';
+        }
+
+        // Load video
+        async function loadVideo(videoId) {
+            currentVideo = videos.find(v => v.id === videoId);
+            if (!currentVideo) return;
+
+            document.getElementById('videoTitle').textContent = currentVideo.title;
+            document.getElementById('videoMeta').textContent = `${currentVideo.type === 'pdf' ? 'PDF album' : 'Video'} · ${currentVideo.size}`;
+            
+            document.querySelectorAll('.video-list-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.id === videoId);
+            });
+
+            requestDownloadBtn.disabled = false;
+            favoriteBtn.disabled = !!sessionInfo.readOnly;
+            shareBtn.disabled = !!sessionInfo.readOnly;
+            shareResult.classList.add('hidden');
+            isDownloadRequested = activity.supportRequests.some(item =>
+                item.requestType === 'download' &&
+                item.mediaId === currentVideo.id &&
+                ['pending', 'reviewing'].includes(item.status || 'pending')
+            );
+            updateDownloadButton();
+            updateFavoriteButton();
+            downloadCopy.textContent = `Request admin approval to download this ${currentVideo.type === 'pdf' ? 'PDF' : 'video'}`;
+            if (sessionInfo.readOnly) {
+                requestDownloadBtn.disabled = true;
+                downloadCopy.textContent = 'Downloads are disabled on temporary view-only links';
+            }
+
+            if (currentVideo.type === 'pdf') {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+                videoWrapper.classList.add('hidden');
+                pdfViewer.classList.remove('hidden');
+                loadPdf(`/api/media/file/${videoId}`, recentById.get(videoId)?.page || 1);
+                loadingSpinner.classList.add('hidden');
+                bigPlayBtn.classList.add('hidden');
+                saveRecent({ page: recentById.get(videoId)?.page || 1 });
+                return;
+            }
+
+            clearPdf();
+            pdfViewer.classList.add('hidden');
+            videoWrapper.classList.remove('hidden');
+            videoRotation = 0;
+            applyVideoRotation();
+
+            loadingSpinner.classList.remove('hidden');
+            bigPlayBtn.classList.add('hidden');
+
+            video.src = `/api/video/stream/${videoId}`;
+            video.load();
+
+            try {
+                await video.play();
+            } catch (error) {
+                console.log('Auto-play prevented');
+            }
+        }
+
+        // Video Controls
+        function togglePlay() {
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        }
+
+        function updatePlayButton() {
+            const playIcon = document.getElementById('playIcon');
+            
+            if (video.paused) {
+                playIcon.innerHTML = '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>';
+                videoWrapper.classList.add('paused');
+                bigPlayBtn.classList.remove('hidden');
+            } else {
+                playIcon.innerHTML = '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1 0a1 1 0 10-2 0 1 1 0 002 0zm-1 0a1 1 0 10-2 0 1 1 0 002 0z" clip-rule="evenodd"/>';
+                videoWrapper.classList.remove('paused');
+                bigPlayBtn.classList.add('hidden');
+            }
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateProgress() {
+            const percent = (video.currentTime / video.duration) * 100;
+            progressBar.style.width = `${percent}%`;
+            timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+            scheduleRecentSave({ lastTime: video.currentTime });
+        }
+
+        function seek(e) {
+            const rect = progressContainer.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            video.currentTime = percent * video.duration;
+        }
+
+        function toggleMute() {
+            video.muted = !video.muted;
+            const volumeIcon = document.getElementById('volumeIcon');
+            if (video.muted) {
+                volumeIcon.innerHTML = '<path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>';
+            } else {
+                volumeIcon.innerHTML = '<path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>';
+            }
+        }
+
+        function updateVolume() {
+            video.volume = volumeSlider.value;
+            video.muted = false;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                videoWrapper.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function toggleTheaterMode() {
+            videoWrapper.classList.toggle('theater-mode');
+        }
+
+        function togglePiP() {
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture();
+            } else if (document.pictureInPictureEnabled) {
+                video.requestPictureInPicture().catch(err => showToast('error', 'PiP not available'));
+            }
+        }
+
+        function applyVideoRotation() {
+            video.style.transform = `rotate(${videoRotation}deg)`;
+            const sideways = Math.abs(videoRotation % 180) === 90;
+            video.style.maxHeight = sideways ? '70vh' : '';
+            video.style.objectFit = 'contain';
+            videoWrapper.style.aspectRatio = sideways ? '16 / 10' : '';
+        }
+
+        function rotateVideo(delta) {
+            videoRotation = (videoRotation + delta + 360) % 360;
+            applyVideoRotation();
+        }
+
+        async function loadPdf(url, startPage = 1) {
+            if (!window.pdfjsLib) {
+                showToast('error', 'PDF viewer failed to load');
+                return;
+            }
+            clearPdf(false);
+            pdfPageInfo.textContent = 'Loading PDF...';
+            try {
+                pdfDoc = await pdfjsLib.getDocument({ url, withCredentials: true }).promise;
+                pdfPageNum = Math.min(Math.max(Number(startPage) || 1, 1), pdfDoc.numPages);
+                pdfScale = 1.1;
+                pdfRotation = 0;
+                renderPdfPage(pdfPageNum);
+            } catch (error) {
+                console.error('PDF load error:', error);
+                showToast('error', 'Failed to load PDF');
+                pdfPageInfo.textContent = 'PDF unavailable';
+            }
+        }
+
+        function clearPdf(clearCanvas = true) {
+            pdfDoc = null;
+            pdfPageNum = 1;
+            pdfScale = 1.1;
+            pdfRotation = 0;
+            pendingPdfPage = null;
+            if (clearCanvas) {
+                const ctx = pdfCanvas.getContext('2d');
+                ctx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+            }
+        }
+
+        async function renderPdfPage(pageNum) {
+            if (!pdfDoc || pdfRendering) {
+                pendingPdfPage = pageNum;
+                return;
+            }
+
+            pdfRendering = true;
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: pdfScale, rotation: pdfRotation });
+            const context = pdfCanvas.getContext('2d');
+            pdfCanvas.height = viewport.height;
+            pdfCanvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport }).promise;
+            pdfRendering = false;
+            updatePdfControls();
+
+            if (pendingPdfPage !== null) {
+                const nextPage = pendingPdfPage;
+                pendingPdfPage = null;
+                renderPdfPage(nextPage);
+            }
+        }
+
+        function queuePdfPage(pageNum) {
+            if (!pdfDoc) return;
+            pdfPageNum = Math.min(Math.max(pageNum, 1), pdfDoc.numPages);
+            renderPdfPage(pdfPageNum);
+            saveRecent({ page: pdfPageNum });
+        }
+
+        function updatePdfControls() {
+            if (!pdfDoc) return;
+            pdfPageInfo.textContent = `Page ${pdfPageNum} / ${pdfDoc.numPages}`;
+            pdfJumpInput.value = pdfPageNum;
+            pdfJumpInput.max = pdfDoc.numPages;
+            pdfZoomInfo.textContent = `${Math.round(pdfScale * 100)}%`;
+            pdfPrevBtn.disabled = pdfPageNum <= 1;
+            pdfNextBtn.disabled = pdfPageNum >= pdfDoc.numPages;
+        }
+
+        function scheduleRecentSave(extra = {}) {
+            clearTimeout(recentSaveTimer);
+            recentSaveTimer = setTimeout(() => saveRecent(extra), 900);
+        }
+
+        async function saveRecent(extra = {}) {
+            if (!currentVideo) return;
+            const next = {
+                mediaId: currentVideo.id,
+                title: currentVideo.title,
+                type: currentVideo.type,
+                albumId: currentVideo.albumId,
+                lastTime: extra.lastTime ?? (currentVideo.type === 'video' ? video.currentTime || 0 : 0),
+                page: extra.page ?? (currentVideo.type === 'pdf' ? pdfPageNum : 1),
+                updatedAt: new Date().toISOString()
+            };
+            recentById.set(currentVideo.id, next);
+            activity.recent = [next, ...activity.recent.filter(item => item.mediaId !== currentVideo.id)].slice(0, 12);
+            renderUserDashboard();
+            renderVideoList();
+            try {
+                await fetch('/api/user/recent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(next)
+                });
+            } catch (error) {
+                console.warn('Recent save failed', error);
+            }
+        }
+
+        // Event Listeners
+        playPauseBtn.addEventListener('click', togglePlay);
+        bigPlayBtn.addEventListener('click', togglePlay);
+        video.addEventListener('click', togglePlay);
+        video.addEventListener('play', updatePlayButton);
+        video.addEventListener('pause', updatePlayButton);
+        video.addEventListener('timeupdate', updateProgress);
+        video.addEventListener('loadedmetadata', () => {
+            loadingSpinner.classList.add('hidden');
+            bigPlayBtn.classList.add('hidden');
+            qualityLabel.textContent = video.videoHeight ? `${video.videoHeight}p` : 'Auto HD';
+            const saved = currentVideo ? recentById.get(currentVideo.id) : null;
+            if (saved && saved.lastTime && saved.lastTime < video.duration - 5) {
+                video.currentTime = saved.lastTime;
+                showToast('success', `Resumed from ${formatTime(saved.lastTime)}`);
+            }
+        });
+        video.addEventListener('waiting', () => loadingSpinner.classList.remove('hidden'));
+        video.addEventListener('playing', () => loadingSpinner.classList.add('hidden'));
+        video.addEventListener('error', () => {
+            loadingSpinner.classList.add('hidden');
+            showToast('error', 'Failed to load video');
+        });
+
+        progressContainer.addEventListener('click', seek);
+        muteBtn.addEventListener('click', toggleMute);
+        volumeSlider.addEventListener('input', updateVolume);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        pipBtn.addEventListener('click', togglePiP);
+        theaterBtn.addEventListener('click', toggleTheaterMode);
+        speedSelect.addEventListener('change', () => {
+            video.playbackRate = Number(speedSelect.value);
+            showToast('success', `Speed ${speedSelect.value}x`);
+        });
+        rotateLeftBtn.addEventListener('click', () => rotateVideo(-90));
+        rotateRightBtn.addEventListener('click', () => rotateVideo(90));
+        pdfPrevBtn.addEventListener('click', () => queuePdfPage(pdfPageNum - 1));
+        pdfNextBtn.addEventListener('click', () => queuePdfPage(pdfPageNum + 1));
+        pdfJumpBtn.addEventListener('click', () => queuePdfPage(Number(pdfJumpInput.value || 1)));
+        pdfJumpInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') queuePdfPage(Number(pdfJumpInput.value || 1));
+        });
+        pdfZoomOutBtn.addEventListener('click', () => {
+            pdfScale = Math.max(0.6, pdfScale - 0.15);
+            renderPdfPage(pdfPageNum);
+        });
+        pdfZoomInBtn.addEventListener('click', () => {
+            pdfScale = Math.min(2.5, pdfScale + 0.15);
+            renderPdfPage(pdfPageNum);
+        });
+        pdfRotateBtn.addEventListener('click', () => {
+            pdfRotation = (pdfRotation + 90) % 360;
+            renderPdfPage(pdfPageNum);
+        });
+
+        favoriteBtn.addEventListener('click', async () => {
+            if (!currentVideo) return;
+            try {
+                const response = await fetch('/api/user/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mediaId: currentVideo.id })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Favorite failed');
+                if (data.favorited) {
+                    favoriteIds.add(currentVideo.id);
+                    activity.favorites = [{ mediaId: currentVideo.id, title: currentVideo.title, type: currentVideo.type, albumId: currentVideo.albumId, createdAt: new Date().toISOString() }, ...activity.favorites];
+                } else {
+                    favoriteIds.delete(currentVideo.id);
+                    activity.favorites = activity.favorites.filter(item => item.mediaId !== currentVideo.id);
+                }
+                updateFavoriteButton();
+                renderUserDashboard();
+                renderVideoList();
+                showToast('success', data.favorited ? 'Added to favorites' : 'Removed from favorites');
+            } catch (error) {
+                showToast('error', error.message);
+            }
+        });
+
+        shareBtn.addEventListener('click', async () => {
+            if (!currentVideo) return;
+            try {
+                const response = await fetch('/api/share/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mediaId: currentVideo.id })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Share link failed');
+                shareResult.textContent = data.shareUrl;
+                shareResult.classList.remove('hidden');
+                if (navigator.clipboard) await navigator.clipboard.writeText(data.shareUrl);
+                showToast('success', 'Temporary view-only link copied');
+            } catch (error) {
+                showToast('error', error.message);
+            }
+        });
+
+        supportBtn.addEventListener('click', () => {
+            supportModal.classList.remove('hidden');
+            supportModal.classList.add('flex');
+        });
+
+        document.getElementById('closeSupportModal').addEventListener('click', () => {
+            supportModal.classList.add('hidden');
+            supportModal.classList.remove('flex');
+        });
+
+        supportModal.addEventListener('click', (e) => {
+            if (e.target === supportModal) {
+                supportModal.classList.add('hidden');
+                supportModal.classList.remove('flex');
+            }
+        });
+
+        supportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = new FormData(e.target);
+            try {
+                const response = await fetch('/api/user/support', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mediaId: currentVideo ? currentVideo.id : '',
+                        subject: form.get('subject'),
+                        message: form.get('message')
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Support request failed');
+                e.target.reset();
+                activity.supportRequests = [{
+                    requestType: 'support',
+                    mediaId: currentVideo ? currentVideo.id : '',
+                    mediaTitle: currentVideo ? currentVideo.title : '',
+                    subject: form.get('subject'),
+                    status: 'open',
+                    createdAt: new Date().toISOString()
+                }, ...activity.supportRequests].slice(0, 10);
+                renderUserDashboard();
+                supportModal.classList.add('hidden');
+                supportModal.classList.remove('flex');
+                showToast('success', 'Support request sent');
+            } catch (error) {
+                showToast('error', error.message);
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (currentVideo && currentVideo.type !== 'pdf') togglePlay();
+                    break;
+                case 'ArrowLeft':
+                    if (currentVideo && currentVideo.type === 'pdf') queuePdfPage(pdfPageNum - 1);
+                    else video.currentTime -= 5;
+                    break;
+                case 'ArrowRight':
+                    if (currentVideo && currentVideo.type === 'pdf') queuePdfPage(pdfPageNum + 1);
+                    else video.currentTime += 5;
+                    break;
+                case 'PageUp': if (currentVideo && currentVideo.type === 'pdf') queuePdfPage(pdfPageNum - 1); break;
+                case 'PageDown': if (currentVideo && currentVideo.type === 'pdf') queuePdfPage(pdfPageNum + 1); break;
+                case 'ArrowUp': video.volume = Math.min(1, video.volume + 0.1); volumeSlider.value = video.volume; break;
+                case 'ArrowDown': video.volume = Math.max(0, video.volume - 0.1); volumeSlider.value = video.volume; break;
+                case 'f': case 'F': toggleFullscreen(); break;
+                case 'm': case 'M': toggleMute(); break;
+                case 'r': case 'R': if (currentVideo && currentVideo.type !== 'pdf') rotateVideo(90); break;
+            }
+        });
+
+        // Prevent context menu
+        videoWrapper.addEventListener('contextmenu', (e) => e.preventDefault());
+        pdfViewer.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('beforeprint', (e) => {
+            if (currentVideo && currentVideo.type === 'pdf') {
+                showToast('error', 'Printing is disabled for protected PDFs');
+                e.preventDefault();
+            }
+        });
+
+        // Download
+        requestDownloadBtn.addEventListener('click', async () => {
+            if (!currentVideo || isDownloadRequested) return;
+
+            const btnText = requestDownloadBtn.querySelector('.btn-text');
+            const btnLoader = requestDownloadBtn.querySelector('.btn-loader');
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            requestDownloadBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/download/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mediaId: currentVideo.id })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    isDownloadRequested = true;
+                    activity.supportRequests = [{
+                        requestType: 'download',
+                        mediaId: currentVideo.id,
+                        mediaTitle: currentVideo.title,
+                        subject: 'Download approval request',
+                        status: 'pending',
+                        createdAt: new Date().toISOString()
+                    }, ...activity.supportRequests.filter(item => !(item.requestType === 'download' && item.mediaId === currentVideo.id))];
+                    renderUserDashboard();
+                    updateDownloadButton();
+                    showToast('success', 'Download request sent for admin approval');
+                } else {
+                    showToast('error', data.error || 'Failed to request download');
+                    requestDownloadBtn.disabled = false;
+                }
+            } catch (error) {
+                showToast('error', 'Failed to request download');
+                requestDownloadBtn.disabled = false;
+            } finally {
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+            }
+        });
+
+        function updateDownloadButton() {
+            if (isDownloadRequested) {
+                requestDownloadBtn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 00.293.707l2 2a1 1 0 001.414-1.414L11 10.586V7z" clip-rule="evenodd"/></svg> Pending Approval';
+                requestDownloadBtn.disabled = true;
+            } else {
+                requestDownloadBtn.innerHTML = '<span class="btn-text">Request Approval</span><div class="btn-loader spinner hidden"></div>';
+                requestDownloadBtn.disabled = !currentVideo;
+            }
+        }
+
+        // Toast
+        function showToast(type, message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5 ${type === 'success' ? 'text-green-400' : 'text-red-400'}" fill="currentColor" viewBox="0 0 20 20">
+                        ${type === 'success' 
+                            ? '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>'
+                            : '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1 0a1 1 0 10-2 0 1 1 0 002 0zm4-8a1 1 0 10-2 0 1 1 0 002 0z" clip-rule="evenodd"/>'}
+                    </svg>
+                    <span>${message}</span>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

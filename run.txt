@@ -1,0 +1,299 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║          SOA Secure Online Album System - Setup Guide                  ║
+║                    Version 1.0.0                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+This guide will help you set up and run the SOA Secure Online Album System
+on a Linux VPS with minimal configuration.
+
+═══════════════════════════════════════════════════════════════════════
+📋 PREREQUISITES
+═══════════════════════════════════════════════════════════════════════
+
+- Linux VPS (Ubuntu 20.04+ recommended)
+- Root or sudo access
+- Domain name (optional, for SSL)
+- SMTP email account (Gmail, SendGrid, etc.)
+
+═══════════════════════════════════════════════════════════════════════
+🚀 QUICK SETUP (Ubuntu/Debian)
+═══════════════════════════════════════════════════════════════════════
+
+# Step 1: Update system packages
+sudo apt update && sudo apt upgrade -y
+
+# Step 2: Install Node.js and npm
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+
+# Step 3: Navigate to project directory
+cd /path/to/video-locker
+
+# Step 4: Install dependencies
+npm install --production
+
+# Step 5: Configure environment
+cp .env.example .env
+nano .env
+
+# Edit the .env file with your settings:
+# - SESSION_SECRET: Generate a random string
+# - ADMIN_PASSWORD: Set your admin password
+# - SMTP_*: Configure your email settings
+# - PORT: Default is 3000
+
+# Step 6: Create necessary directories
+mkdir -p uploads data views
+
+# Step 7: Set proper permissions
+chmod 755 uploads data
+chmod 644 .env
+
+# Step 8: Start the application
+npm start
+
+# Or run in background with PM2 (recommended for production)
+sudo npm install -g pm2
+pm2 start server.js --name video-album
+pm2 save
+pm2 startup
+
+═══════════════════════════════════════════════════════════════════════
+🔧 CONFIGURATION DETAILS
+═══════════════════════════════════════════════════════════════════════
+
+1. Environment Variables (.env file):
+
+   PORT=3000
+       The port the application will run on.
+
+   NODE_ENV=production
+       Set to production for secure cookie settings.
+
+   SESSION_SECRET=your-random-secret-key
+       Generate a strong random string. Use:
+       node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+   ADMIN_PASSWORD=your-secure-password
+       Password for accessing /admin panel.
+       Change from default immediately!
+
+   SMTP_HOST=smtp.gmail.com
+       Your SMTP server hostname.
+
+   SMTP_PORT=587
+       SMTP port (587 for TLS, 465 for SSL).
+
+   SMTP_SECURE=false
+       Set to true for SSL (port 465), false for TLS (port 587).
+
+   SMTP_USER=your-email@gmail.com
+       Your SMTP username/email.
+
+   SMTP_PASS=your-app-password
+       Your SMTP password or app-specific password.
+       For Gmail, generate an App Password at:
+       https://myaccount.google.com/apppasswords
+
+   EMAIL_FROM="SOA Secure Online Album" <noreply@yourdomain.com>
+       Sender email address shown to recipients.
+
+   MAX_FILE_SIZE_MB=500
+       Maximum video file size in megabytes.
+
+   OTP_EXPIRY_MINUTES=5
+       How long OTP codes remain valid.
+
+   DOWNLOAD_TOKEN_EXPIRY_MINUTES=5
+       How long download links remain valid.
+
+═══════════════════════════════════════════════════════════════════════
+🔒 SSL/HTTPS SETUP (Recommended)
+═══════════════════════════════════════════════════════════════════════
+
+Using Nginx as reverse proxy with Let's Encrypt:
+
+# Install Nginx
+sudo apt install -y nginx
+
+# Create Nginx configuration
+sudo nano /etc/nginx/sites-available/video-album
+
+# Add this configuration:
+"""
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+"""
+
+# Enable site
+sudo ln -s /etc/nginx/sites-available/video-album /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+# Install Certbot and get SSL certificate
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+
+# Auto-renewal is configured automatically
+# Test renewal with: sudo certbot renew --dry-run
+
+═══════════════════════════════════════════════════════════════════════
+🛡️ SECURITY RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════════════
+
+1. FIREWALL SETUP (UFW)
+   sudo ufw allow 22/tcp    # SSH
+   sudo ufw allow 80/tcp    # HTTP
+   sudo ufw allow 443/tcp   # HTTPS
+   sudo ufw enable
+
+2. FAIL2BAN (Protect against brute force)
+   sudo apt install -y fail2ban
+   sudo systemctl enable fail2ban
+   sudo systemctl start fail2ban
+
+3. CHANGE DEFAULT ADMIN PASSWORD
+   Update ADMIN_PASSWORD in .env file
+   Restart the application after changes
+
+4. SECURE THE /uploads DIRECTORY
+   The uploads directory is already protected - videos can only be
+   accessed through authenticated API endpoints, not directly.
+
+5. REGULAR BACKUPS
+   Backup the /data directory regularly - it contains all database files.
+   sudo tar -czf video-album-backup-$(date +%Y%m%d).tar.gz data/
+
+═══════════════════════════════════════════════════════════════════════
+📊 MONITORING & MAINTENANCE
+═══════════════════════════════════════════════════════════════════════
+
+# View application logs (if using PM2)
+pm2 logs video-album
+
+# Monitor resource usage
+pm2 monit
+
+# Restart application
+pm2 restart video-album
+
+# Stop application
+pm2 stop video-album
+
+# View running processes
+pm2 list
+
+# Check disk space
+df -h
+
+# Check uploads directory size
+du -sh uploads/
+
+═══════════════════════════════════════════════════════════════════════
+🔧 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════
+
+Problem: Port already in use
+Solution: Change PORT in .env or kill the process using port 3000
+          lsof -i :3000
+          kill -9 <PID>
+
+Problem: Permission denied on uploads
+Solution: sudo chown -R $USER:$USER uploads/
+          chmod -R 755 uploads/
+
+Problem: Emails not sending
+Solution: Verify SMTP credentials in .env
+          Check if SMTP requires app-specific password
+          Test with: node -e "require('dotenv').config(); console.log(process.env.SMTP_USER)"
+
+Problem: Videos won't play
+Solution: Check file permissions: ls -la uploads/
+          Verify videos are MP4 format
+          Check browser console for errors
+
+Problem: Database errors
+Solution: Check data directory permissions
+          Ensure data/ directory exists
+          Check disk space: df -h
+
+═══════════════════════════════════════════════════════════════════════
+📱 USAGE GUIDE
+═══════════════════════════════════════════════════════════════════════
+
+ADMIN PANEL (/admin):
+1. Navigate to http://your-domain.com/admin
+2. Enter admin password
+3. Upload videos with:
+   - Unique Album ID (6-digit code)
+   - User Email (for OTP verification)
+   - Optional: User ID, Customer ID
+4. Manage albums and videos
+
+USER ACCESS FLOW:
+1. User visits http://your-domain.com
+2. Enters their Album ID
+3. Sees masked email (e.g., go****@gmail.com)
+4. Enters full email address
+5. Receives OTP via email
+6. Enters OTP to access videos
+7. Can stream videos or request download link
+
+═══════════════════════════════════════════════════════════════════════
+🔄 UPDATING THE APPLICATION
+═══════════════════════════════════════════════════════════════════════
+
+# Stop the application
+pm2 stop video-album
+
+# Pull latest changes (if using git)
+git pull origin main
+
+# Install new dependencies
+npm install --production
+
+# Restart
+pm2 restart video-album
+
+═══════════════════════════════════════════════════════════════════════
+📞 SUPPORT
+═══════════════════════════════════════════════════════════════════════
+
+For issues and questions:
+1. Check the logs: pm2 logs video-album
+2. Verify .env configuration
+3. Ensure all directories have correct permissions
+4. Check that Node.js version is 14 or higher
+
+═══════════════════════════════════════════════════════════════════════
+
+Quick Start Commands Summary:
+─────────────────────────────
+sudo apt update
+sudo apt install -y nodejs
+cd /path/to/video-locker
+npm install --production
+cp .env.example .env
+nano .env  # Configure your settings
+mkdir -p uploads data
+npm start  # or: pm2 start server.js --name video-album
+
+═══════════════════════════════════════════════════════════════════════

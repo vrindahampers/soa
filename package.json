@@ -1,0 +1,35 @@
+{
+  "name": "secure-video-album",
+  "version": "1.0.0",
+  "description": "SOA Secure Online Album System with OTP authentication and protected streaming",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "dev:tunnel": "node scripts/github-dev-tunnel.js",
+    "start:tunnel": "node scripts/github-dev-tunnel.js"
+  },
+  "keywords": [
+    "video",
+    "streaming",
+    "secure",
+    "otp",
+    "album"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "crypto": "^1.0.1",
+    "discord.js": "^14.26.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-session": "^1.17.3",
+    "helmet": "^7.1.0",
+    "multer": "^1.4.5-lts.1",
+    "nedb": "^1.8.0",
+    "nodemailer": "^6.9.7",
+    "uuid": "^9.0.1"
+  }
+}

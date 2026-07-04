@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOA | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#007AFF', surface: '#F5F5F7', border: '#D2D2D7',
+                        text: '#1D1D1F', textSecondary: '#6E6E73'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --soa-ink: #08111f;
+            --soa-panel: #ffffff;
+            --soa-surface: #eef3f6;
+            --soa-line: rgba(15, 23, 42, 0.1);
+            --soa-cyan: #00a7c7;
+            --soa-gold: #b8892f;
+        }
+
+        * { letter-spacing: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background:
+                linear-gradient(120deg, rgba(8,17,31,0.05), rgba(0,167,199,0.08) 42%, rgba(184,137,47,0.08));
+            color: #0f172a;
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hidden { display: none !important; }
+        .spinner { border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .rounded-3xl, .rounded-2xl, .rounded-xl, .rounded-lg { border-radius: 8px !important; }
+        .shadow-sm, .shadow-soft { box-shadow: 0 18px 50px rgba(8, 17, 31, 0.08) !important; }
+        .bg-white {
+            background: rgba(255, 255, 255, 0.92) !important;
+            border: 1px solid rgba(255,255,255,0.72);
+            box-shadow: 0 18px 50px rgba(8, 17, 31, 0.08);
+        }
+        .bg-surface { background: rgba(238, 243, 246, 0.9) !important; }
+        input, textarea, select {
+            background: rgba(255,255,255,0.92) !important;
+            border-color: var(--soa-line) !important;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--soa-cyan) !important;
+            box-shadow: 0 0 0 4px rgba(0,167,199,0.12);
+        }
+        button, a { transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; }
+        button:hover, a:hover { transform: translateY(-1px); }
+        aside {
+            background: linear-gradient(180deg, #08111f 0%, #0d1c2e 58%, #162015 130%) !important;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 12px 0 40px rgba(8, 17, 31, 0.22);
+        }
+        .sidebar-item { transition: all 0.2s ease; border-left: 3px solid transparent; }
+        .sidebar-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .sidebar-item.active { background: rgba(0,167,199,0.18); border-left: 3px solid var(--soa-cyan); color: #fff; }
+        table th { color: #64748b !important; text-transform: uppercase; font-size: 11px !important; }
+        table td { border-color: rgba(15,23,42,0.06) !important; }
+        .tab-content > .flex:first-child h1 { letter-spacing: 0; }
+        .btn-lux, .bg-primary {
+            background: linear-gradient(135deg, #08111f 0%, #123c4b 62%, #b8892f 170%) !important;
+            color: #fff !important;
+            box-shadow: 0 14px 34px rgba(8, 17, 31, 0.18);
+        }
+        #dashboardTab .grid.grid-cols-5 > div,
+        #uploadTab .grid.grid-cols-3 > div,
+        #infoPanel .grid.grid-cols-4 > div {
+            border-top: 2px solid rgba(0,167,199,0.22);
+        }
+        @media (max-width: 900px) {
+            #dashboard { display: block; }
+            aside { position: static !important; width: 100% !important; height: auto !important; }
+            aside nav { display: flex; overflow-x: auto; padding-bottom: 8px; }
+            aside nav a { white-space: nowrap; flex-shrink: 0; }
+            main { margin-left: 0 !important; padding: 16px !important; }
+            table { min-width: 760px; }
+            .overflow-hidden:has(table) { overflow-x: auto; }
+            .grid-cols-5, .grid-cols-4, .grid-cols-3, .grid-cols-12 { grid-template-columns: 1fr !important; }
+            .col-span-2, .col-span-5, .col-span-7 { grid-column: span 1 / span 1 !important; }
+            .flex.items-center.justify-between { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+            aside .p-6 { padding: 16px; }
+        }
+    </style>
+</head>
+<body class="bg-surface min-h-screen">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-soft p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <h1 class="text-2xl font-semibold text-text mb-2">Admin Access</h1>
+                <p class="text-textSecondary font-light">Enter your password to continue</p>
+            </div>
+            <form id="loginForm">
+                <div class="mb-6">
+                    <input type="password" id="password" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all" placeholder="Password" required>
+                </div>
+                <button type="submit" id="loginBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium flex items-center justify-center gap-2 hover:shadow-lg transition-all">
+                    <span class="btn-text">Sign In</span>
+                    <div class="btn-loader spinner hidden"></div>
+                </button>
+                <div id="loginError" class="mt-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm hidden">Invalid password</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="hidden min-h-screen flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-900 text-white fixed h-full">
+            <div class="p-6">
+                <h2 class="text-xl font-semibold flex items-center gap-2">
+                    <span class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-sm font-bold">SOA</span>
+                    <span>
+                        SOA
+                        <span class="block text-xs font-normal text-gray-400">Secure Online Album</span>
+                    </span>
+                </h2>
+            </div>
+            <nav class="mt-4">
+                <a href="#" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="dashboard">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5z"/></svg>
+                    Dashboard
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="upload">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Upload
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="albums">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Albums
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="videos">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Files
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="userinfo">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m4-4a4 4 0 100-8 4 4 0 000 8zm6 2a3 3 0 100-6"/></svg>
+                    User Info
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="support">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 10c0 3.866-3.582 7-8 7a9.9 9.9 0 01-4-.8L2 17l1.2-3.2A6.15 6.15 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
+                    Support
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300" data-tab="settings">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.607 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Settings
+                </a>
+                <a href="#" id="logoutBtn" class="sidebar-item flex items-center gap-3 px-6 py-3 text-gray-300 mt-auto">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    Logout
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="ml-64 flex-1 p-8">
+            <!-- Dashboard Tab -->
+            <div id="dashboardTab" class="tab-content fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-text">SOA Command Center</h1>
+                        <p class="text-sm text-textSecondary mt-1">Fast controls, exports, and monitoring for Secure Online Album.</p>
+                    </div>
+                    <button onclick="refreshAdmin()" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Refresh</button>
+                </div>
+
+                <div class="grid grid-cols-5 gap-4 mb-6">
+                    <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold text-primary" id="dashFiles">0</div><div class="text-sm text-textSecondary">Files</div></div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold text-green-500" id="dashAlbums">0</div><div class="text-sm text-textSecondary">Albums</div></div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold text-purple-500" id="dashUsers">0</div><div class="text-sm text-textSecondary">Users</div></div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold text-red-500" id="dashPdfs">0</div><div class="text-sm text-textSecondary">PDFs</div></div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold text-blue-500" id="dashVideos">0</div><div class="text-sm text-textSecondary">Videos</div></div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-text mb-4">20 SOA Features Enabled</h2>
+                    <div class="grid grid-cols-4 gap-3 text-sm text-textSecondary">
+                        <div class="p-3 rounded-xl bg-surface">1. OTP album login</div>
+                        <div class="p-3 rounded-xl bg-surface">2. Customer collection login</div>
+                        <div class="p-3 rounded-xl bg-surface">3. Self info email link</div>
+                        <div class="p-3 rounded-xl bg-surface">4. PDF page viewer</div>
+                        <div class="p-3 rounded-xl bg-surface">5. PDF zoom</div>
+                        <div class="p-3 rounded-xl bg-surface">6. PDF rotate</div>
+                        <div class="p-3 rounded-xl bg-surface">7. Video rotate</div>
+                        <div class="p-3 rounded-xl bg-surface">8. Secure streaming</div>
+                        <div class="p-3 rounded-xl bg-surface">9. One-use downloads</div>
+                        <div class="p-3 rounded-xl bg-surface">10. Fixed user IDs</div>
+                        <div class="p-3 rounded-xl bg-surface">11. Fixed customer IDs</div>
+                        <div class="p-3 rounded-xl bg-surface">12. User info editor</div>
+                        <div class="p-3 rounded-xl bg-surface">13. Album edit modal</div>
+                        <div class="p-3 rounded-xl bg-surface">14. File edit modal</div>
+                        <div class="p-3 rounded-xl bg-surface">15. Settings editor</div>
+                        <div class="p-3 rounded-xl bg-surface">16. SMTP test</div>
+                        <div class="p-3 rounded-xl bg-surface">17. Album export CSV</div>
+                        <div class="p-3 rounded-xl bg-surface">18. File export CSV</div>
+                        <div class="p-3 rounded-xl bg-surface">19. User export CSV</div>
+                        <div class="p-3 rounded-xl bg-surface">20. Search and filters</div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="switchTab('upload')" class="px-4 py-2 rounded-xl bg-primary text-white">Upload File</button>
+                    <button onclick="downloadExport('users')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary">Export Users</button>
+                    <button onclick="downloadExport('albums')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary">Export Albums</button>
+                    <button onclick="downloadExport('files')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary">Export Files</button>
+                    <a href="/info" target="_blank" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary">Open User Info Check</a>
+                </div>
+            </div>
+
+            <!-- Upload Tab -->
+            <div id="uploadTab" class="tab-content hidden fade-in">
+                <h1 class="text-2xl font-semibold text-text mb-6">Upload Album File</h1>
+                
+                <div class="grid grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="text-3xl font-bold text-primary mb-1" id="totalVideos">0</div>
+                        <div class="text-sm text-textSecondary">Total Files</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="text-3xl font-bold text-green-500 mb-1" id="totalAlbums">0</div>
+                        <div class="text-sm text-textSecondary">Total Albums</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="text-3xl font-bold text-purple-500 mb-1" id="totalUsers">0</div>
+                        <div class="text-sm text-textSecondary">Total Users</div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="border-2 border-dashed border-border rounded-2xl p-8 text-center mb-6 hover:border-primary transition-colors cursor-pointer" id="dropZone">
+                            <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                            <p class="text-textSecondary">Drag & drop or <span class="text-primary cursor-pointer">browse files</span></p>
+                            <p class="text-sm text-gray-400 mt-2">MP4 video or PDF album, max 500MB</p>
+                            <input type="file" id="videoFile" accept="video/mp4,application/pdf,.pdf" class="hidden">
+                        </div>
+
+                        <div id="filePreview" class="hidden bg-surface rounded-xl p-4 mb-6 flex items-center gap-4">
+                            <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <div class="flex-1">
+                                <p class="font-medium text-text" id="fileName"></p>
+                                <p class="text-sm text-textSecondary" id="fileSize"></p>
+                            </div>
+                            <button type="button" id="removeFile" class="text-gray-400 hover:text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </div>
+
+                        <div class="progress hidden mb-6">
+                            <div class="h-2 bg-surface rounded-full overflow-hidden">
+                                <div class="h-full bg-primary rounded-full transition-all" id="progressBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-text mb-2">Album ID *</label>
+                                <input type="text" id="albumId" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary outline-none" placeholder="e.g., 123456" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text mb-2">File Title</label>
+                                <input type="text" id="videoTitle" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary outline-none" placeholder="Optional">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text mb-2">User Email *</label>
+                                <input type="email" id="userEmail" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary outline-none" placeholder="user@example.com" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text mb-2">User ID</label>
+                                <input type="text" id="userId" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary outline-none" placeholder="Optional">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text mb-2">Customer ID</label>
+                                <input type="text" id="customerId" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary outline-none" placeholder="Optional">
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button type="submit" id="uploadBtn" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium flex items-center gap-2 hover:shadow-lg transition-all">
+                                <span class="btn-text">Upload File</span>
+                                <div class="btn-loader spinner hidden"></div>
+                            </button>
+                            <button type="reset" id="resetBtn" class="px-6 py-3 rounded-xl border border-border text-textSecondary hover:bg-surface transition-colors">Reset</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Albums Tab -->
+            <div id="albumsTab" class="tab-content hidden fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-semibold text-text">Albums</h1>
+                    <button onclick="downloadExport('albums')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Export CSV</button>
+                </div>
+                <input id="albumSearch" type="search" class="w-full mb-4 px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="Search album, email, user ID, customer ID">
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-surface">
+                            <tr>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Album ID</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">User Email</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">User ID</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Customer ID</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Created</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="albumsTableBody">
+                            <tr><td colspan="6" class="py-8 text-center text-textSecondary">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Files Tab -->
+            <div id="videosTab" class="tab-content hidden fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-semibold text-text">Album Files</h1>
+                    <button onclick="downloadExport('files')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Export CSV</button>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <input id="fileSearch" type="search" class="col-span-2 px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="Search title or album ID">
+                    <select id="fileTypeFilter" class="px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                        <option value="all">All file types</option>
+                        <option value="video">Videos only</option>
+                        <option value="pdf">PDFs only</option>
+                    </select>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-surface">
+                            <tr>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Title</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Type</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Album ID</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Size</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Created</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="videosTableBody">
+                            <tr><td colspan="5" class="py-8 text-center text-textSecondary">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- User Info Tab -->
+            <div id="userinfoTab" class="tab-content hidden fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-text">User Info</h1>
+                        <p class="text-sm text-textSecondary mt-1">Check fixed IDs, albums, videos and PDF albums for each email</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="downloadExport('users')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Export CSV</button>
+                        <button id="refreshUsersBtn" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Refresh</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="col-span-5 bg-white rounded-2xl shadow-sm overflow-hidden">
+                        <div class="p-4 border-b border-border/40">
+                            <input id="userSearch" type="search" class="w-full px-4 py-3 rounded-xl border border-border focus:border-primary outline-none" placeholder="Search email, user ID or customer ID">
+                        </div>
+                        <div id="usersList" class="divide-y divide-border/40 max-h-[680px] overflow-y-auto">
+                            <div class="py-8 text-center text-textSecondary">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-7 bg-white rounded-2xl shadow-sm p-6">
+                        <div id="userInfoEmpty" class="h-full min-h-[360px] flex items-center justify-center text-textSecondary">Select a user to inspect details</div>
+                        <div id="userInfoDetail" class="hidden">
+                            <div class="flex items-start justify-between gap-4 mb-6">
+                                <div>
+                                    <h2 class="text-xl font-semibold text-text" id="detailEmail">-</h2>
+                                    <p class="text-sm text-textSecondary mt-1">User ID: <span id="detailUserId">-</span> · Customer ID: <span id="detailCustomerId">-</span></p>
+                                </div>
+                                <button id="saveUserBtn" class="px-4 py-2 rounded-xl bg-primary text-white font-medium">Edit User</button>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3 mb-6">
+                                <input id="editUserEmail" type="email" class="px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="Email">
+                                <input id="editUserId" type="text" class="px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="User ID">
+                                <input id="editCustomerId" type="text" class="px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="Customer ID">
+                            </div>
+                            <textarea id="editUserNotes" class="w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary mb-6" rows="2" placeholder="Admin notes"></textarea>
+
+                            <h3 class="font-semibold text-text mb-3">Associated Albums</h3>
+                            <div id="detailAlbums" class="space-y-2 mb-6"></div>
+
+                            <h3 class="font-semibold text-text mb-3">Associated Files</h3>
+                            <div id="detailMedia" class="space-y-2 max-h-[260px] overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Tab -->
+            <div id="supportTab" class="tab-content hidden fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-text">Tickets & Download Approvals</h1>
+                        <p class="text-sm text-textSecondary mt-1">Support messages plus admin approval requests for secure downloads</p>
+                    </div>
+                    <button onclick="downloadExport('support')" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Export CSV</button>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-surface">
+                            <tr>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Type</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">User</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">File</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Request</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Status</th>
+                                <th class="text-left py-4 px-6 font-medium text-textSecondary text-sm">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supportTableBody">
+                            <tr><td colspan="6" class="py-8 text-center text-textSecondary">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settingsTab" class="tab-content hidden fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-semibold text-text">Settings</h1>
+                        <p class="text-sm text-textSecondary mt-1">Edit .env, test email, and monitor the admin system</p>
+                    </div>
+                    <button id="reloadSettingsBtn" class="px-4 py-2 rounded-xl bg-white border border-border text-textSecondary hover:bg-surface">Reload</button>
+                </div>
+
+                <div id="restartNotice" class="hidden mb-6 p-4 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 text-sm"></div>
+
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-2xl p-5 shadow-sm">
+                        <div class="text-2xl font-semibold text-text" id="settingsUsers">0</div>
+                        <div class="text-sm text-textSecondary">Users</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm">
+                        <div class="text-2xl font-semibold text-text" id="settingsFiles">0</div>
+                        <div class="text-sm text-textSecondary">Files</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm">
+                        <div class="text-2xl font-semibold text-text" id="settingsStorage">0 Bytes</div>
+                        <div class="text-sm text-textSecondary">Storage</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm">
+                        <div class="text-2xl font-semibold text-text" id="settingsUptime">0s</div>
+                        <div class="text-sm text-textSecondary">Uptime</div>
+                    </div>
+                </div>
+
+                <form id="settingsForm" class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-sm p-6">
+                        <h2 class="text-lg font-semibold text-text mb-4">Security</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">Admin Password</span>
+                                <input data-env="ADMIN_PASSWORD" type="text" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">Session Secret</span>
+                                <input data-env="SESSION_SECRET" type="text" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-text">SMTP Email</h2>
+                            <button type="button" id="testEmailBtn" class="px-4 py-2 rounded-xl border border-border text-textSecondary hover:bg-surface">Send Test</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input data-env="SMTP_HOST" class="settings-input px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="SMTP Host">
+                            <input data-env="SMTP_PORT" type="number" class="settings-input px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="SMTP Port">
+                            <select data-env="SMTP_SECURE" class="settings-input px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                                <option value="false">STARTTLS / false</option>
+                                <option value="true">SSL / true</option>
+                            </select>
+                            <input data-env="SMTP_USER" class="settings-input px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="SMTP User">
+                            <input data-env="SMTP_PASS" type="password" class="settings-input px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="SMTP password - leave blank to keep current">
+                            <input data-env="EMAIL_FROM" class="settings-input px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="Email From">
+                        </div>
+                        <p class="text-xs text-textSecondary mt-3" id="smtpPassHint"></p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm p-6">
+                        <h2 class="text-lg font-semibold text-text mb-4">Access & Upload</h2>
+                        <div class="grid grid-cols-3 gap-4">
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">OTP Expiry Minutes</span>
+                                <input data-env="OTP_EXPIRY_MINUTES" type="number" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">OTP Length</span>
+                                <input data-env="OTP_LENGTH" type="number" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">Download Link Expiry</span>
+                                <input data-env="DOWNLOAD_TOKEN_EXPIRY_MINUTES" type="number" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">Max File Size MB</span>
+                                <input data-env="MAX_FILE_SIZE_MB" type="number" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">Port</span>
+                                <input data-env="PORT" type="number" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                            </label>
+                            <label class="block">
+                                <span class="block text-sm font-medium text-text mb-2">Node Env</span>
+                                <select data-env="NODE_ENV" class="settings-input w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">
+                                    <option value="production">production</option>
+                                    <option value="development">development</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button type="submit" id="saveSettingsBtn" class="px-6 py-3 rounded-xl bg-primary text-white font-medium">Save Settings</button>
+                        <button type="button" id="openEnvBtn" class="px-6 py-3 rounded-xl border border-border text-textSecondary hover:bg-white">Open .env Values</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 fade-in">
+            <h3 class="text-lg font-semibold text-text mb-2">Confirm Delete</h3>
+            <p class="text-textSecondary mb-6" id="deleteMessage">Are you sure?</p>
+            <div class="flex gap-3 justify-end">
+                <button id="cancelDelete" class="px-4 py-2 rounded-xl border border-border text-textSecondary hover:bg-surface">Cancel</button>
+                <button id="confirmDelete" class="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4 fade-in">
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                    <h3 class="text-xl font-semibold text-text" id="editModalTitle">Edit</h3>
+                    <p class="text-sm text-textSecondary mt-1" id="editModalSubtitle">Change details and save once</p>
+                </div>
+                <button id="closeEditModal" class="w-9 h-9 rounded-xl border border-border text-textSecondary hover:bg-surface">×</button>
+            </div>
+            <form id="editModalForm">
+                <div id="editModalFields" class="grid grid-cols-2 gap-4 mb-6"></div>
+                <div class="flex gap-3 justify-end">
+                    <button type="button" id="cancelEditModal" class="px-4 py-2 rounded-xl border border-border text-textSecondary hover:bg-surface">Cancel</button>
+                    <button type="submit" id="saveEditModal" class="px-5 py-2 rounded-xl bg-primary text-white font-medium">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-4 right-4 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-lg hidden fade-in z-50">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        let selectedFile = null, deleteTarget = null;
+        let users = [], selectedUser = null, selectedUserInfo = null;
+        let adminAlbums = [], adminVideos = [], adminSupport = [];
+        let editContext = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/admin/status');
+                const data = await res.json();
+                if (data.isAdmin) showDashboard();
+            } catch(e) {}
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            btn.querySelector('.btn-text').classList.add('hidden');
+            btn.querySelector('.btn-loader').classList.remove('hidden');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({password})
+                });
+                const data = await res.json();
+                if (res.ok && data.success) showDashboard();
+                else document.getElementById('loginError').classList.remove('hidden');
+            } catch(e) {
+                document.getElementById('loginError').classList.remove('hidden');
+            } finally {
+                btn.querySelector('.btn-text').classList.remove('hidden');
+                btn.querySelector('.btn-loader').classList.add('hidden');
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await fetch('/api/admin/logout', {method: 'POST'});
+            location.reload();
+        });
+
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            switchTab(window.location.pathname === '/userinfo' ? 'userinfo' : 'dashboard');
+            if (window.location.pathname === '/userinfo') switchTab('userinfo');
+        }
+
+        document.querySelectorAll('[data-tab]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(link.dataset.tab);
+            });
+        });
+
+        function switchTab(tab) {
+            document.querySelectorAll('[data-tab]').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(tab + 'Tab').classList.remove('hidden');
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'albums') loadAlbums();
+            if (tab === 'videos') loadVideos();
+            if (tab === 'userinfo') loadUsers();
+            if (tab === 'support') loadSupport();
+            if (tab === 'settings') loadSettings();
+        }
+
+        async function loadStats() {
+            try {
+                const [a, v, u] = await Promise.all([fetch('/api/admin/albums'), fetch('/api/admin/videos'), fetch('/api/admin/users')]);
+                const albums = await a.json();
+                const videos = await v.json();
+                const userData = await u.json();
+                document.getElementById('totalAlbums').textContent = albums.albums.length;
+                document.getElementById('totalVideos').textContent = videos.videos.length;
+                document.getElementById('totalUsers').textContent = userData.users.length;
+                updateDashboardStats(albums.albums || [], videos.videos || [], userData.users || []);
+            } catch(e) {}
+        }
+
+        async function loadDashboard() {
+            await loadStats();
+        }
+
+        function updateDashboardStats(albums, videos, users) {
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+            setText('dashFiles', videos.length);
+            setText('dashAlbums', albums.length);
+            setText('dashUsers', users.length);
+            setText('dashPdfs', videos.filter(v => v.type === 'pdf').length);
+            setText('dashVideos', videos.filter(v => v.type !== 'pdf').length);
+        }
+
+        function refreshAdmin() {
+            const active = document.querySelector('[data-tab].active')?.dataset.tab || 'dashboard';
+            switchTab(active);
+        }
+
+        function downloadExport(type) {
+            window.location.href = `/api/admin/export/${type}`;
+        }
+
+        async function loadAlbums() {
+            try {
+                const res = await fetch('/api/admin/albums');
+                const data = await res.json();
+                adminAlbums = data.albums || [];
+                const tbody = document.getElementById('albumsTableBody');
+                if (adminAlbums.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-textSecondary">No albums found</td></tr>';
+                    return;
+                }
+                renderAlbums();
+            } catch(e) { showToast('error', 'Failed to load albums'); }
+        }
+
+        function renderAlbums() {
+            const tbody = document.getElementById('albumsTableBody');
+            const query = (document.getElementById('albumSearch')?.value || '').toLowerCase();
+            const filtered = adminAlbums.filter(a => `${a.albumId} ${a.fullEmail} ${a.userEmail} ${a.userId} ${a.customerId}`.toLowerCase().includes(query));
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-textSecondary">No matching albums</td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(a => `
+                    <tr class="border-t border-border/30 hover:bg-surface/50">
+                        <td class="py-4 px-6 font-medium">${escapeHtml(a.albumId)}</td>
+                        <td class="py-4 px-6 text-textSecondary">${escapeHtml(a.userEmail)}</td>
+                        <td class="py-4 px-6 text-textSecondary">${escapeHtml(a.userId) || '-'}</td>
+                        <td class="py-4 px-6 text-textSecondary">${escapeHtml(a.customerId) || '-'}</td>
+                        <td class="py-4 px-6 text-textSecondary">${new Date(a.createdAt).toLocaleDateString()}</td>
+                        <td class="py-4 px-6">
+                            <div class="flex gap-3">
+                                <button class="text-primary hover:text-primaryHover text-sm" onclick="editAlbumById('${a.id}')">Edit</button>
+                                <button class="text-red-500 hover:text-red-600 text-sm" onclick="confirmDelete('album','${a.id}','${escapeHtml(a.albumId)}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        async function loadVideos() {
+            try {
+                const res = await fetch('/api/admin/videos');
+                const data = await res.json();
+                adminVideos = data.videos || [];
+                const tbody = document.getElementById('videosTableBody');
+                if (adminVideos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-textSecondary">No files found</td></tr>';
+                    return;
+                }
+                renderVideos();
+            } catch(e) { showToast('error', 'Failed to load files'); }
+        }
+
+        function renderVideos() {
+            const tbody = document.getElementById('videosTableBody');
+            const query = (document.getElementById('fileSearch')?.value || '').toLowerCase();
+            const type = document.getElementById('fileTypeFilter')?.value || 'all';
+            const filtered = adminVideos.filter(v => {
+                const matchesQuery = `${v.title} ${v.albumId} ${v.type}`.toLowerCase().includes(query);
+                const matchesType = type === 'all' || v.type === type;
+                return matchesQuery && matchesType;
+            });
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-textSecondary">No matching files</td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(v => `
+                    <tr class="border-t border-border/30 hover:bg-surface/50">
+                        <td class="py-4 px-6 font-medium">${escapeHtml(v.title)}</td>
+                        <td class="py-4 px-6"><span class="px-2 py-1 rounded-full text-xs font-medium ${v.type === 'pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}">${v.type === 'pdf' ? 'PDF' : 'Video'}</span></td>
+                        <td class="py-4 px-6 text-textSecondary">${escapeHtml(v.albumId)}</td>
+                        <td class="py-4 px-6 text-textSecondary">${escapeHtml(v.size)}</td>
+                        <td class="py-4 px-6 text-textSecondary">${new Date(v.createdAt).toLocaleDateString()}</td>
+                        <td class="py-4 px-6">
+                            <div class="flex gap-3">
+                                <button class="text-primary hover:text-primaryHover text-sm" onclick="editFileById('${v.id}')">Edit</button>
+                                <button class="text-red-500 hover:text-red-600 text-sm" onclick="confirmDelete('video','${v.id}','${escapeHtml(v.title)}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        async function loadSupport() {
+            try {
+                const res = await fetch('/api/admin/support');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load support');
+                adminSupport = data.requests || [];
+                renderSupport();
+            } catch(e) { showToast('error', e.message); }
+        }
+
+        function renderSupport() {
+            const tbody = document.getElementById('supportTableBody');
+            if (!adminSupport.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-textSecondary">No tickets yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = adminSupport.map(item => `
+                <tr class="border-t border-border/30 hover:bg-surface/50 align-top">
+                    <td class="py-4 px-6">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium ${item.requestType === 'download' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'}">${item.requestType === 'download' ? 'Download' : 'Support'}</span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="font-medium text-text">${escapeHtml(item.userEmail)}</div>
+                        <div class="text-xs text-textSecondary">${escapeHtml(item.userId || '')} · ${escapeHtml(item.customerId || '')}</div>
+                    </td>
+                    <td class="py-4 px-6 text-textSecondary">${escapeHtml(item.mediaTitle || '-')}</td>
+                    <td class="py-4 px-6">
+                        <div class="font-medium text-text">${escapeHtml(item.subject)}</div>
+                        <div class="text-sm text-textSecondary max-w-md">${escapeHtml(item.message)}</div>
+                        ${item.downloadSentAt ? `<div class="text-xs text-green-600 mt-2">Download email sent ${new Date(item.downloadSentAt).toLocaleString()}</div>` : ''}
+                    </td>
+                    <td class="py-4 px-6">
+                        ${item.requestType === 'download' ? `
+                            <div class="flex flex-wrap gap-2">
+                                <button class="px-3 py-2 rounded-xl bg-primary text-white text-sm disabled:opacity-50" onclick="updateSupportStatus('${item.id}', 'approved')" ${item.status === 'approved' ? 'disabled' : ''}>Approve</button>
+                                <button class="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-sm disabled:opacity-50" onclick="updateSupportStatus('${item.id}', 'rejected')" ${item.status === 'rejected' ? 'disabled' : ''}>Reject</button>
+                            </div>
+                            <div class="text-xs text-textSecondary mt-2">Status: ${escapeHtml(item.status || 'pending')}</div>
+                        ` : `
+                            <select class="px-3 py-2 rounded-xl border border-border outline-none" onchange="updateSupportStatus('${item.id}', this.value)">
+                                ${['open','reviewing','done'].map(status => `<option value="${status}" ${item.status === status ? 'selected' : ''}>${status}</option>`).join('')}
+                            </select>
+                        `}
+                    </td>
+                    <td class="py-4 px-6 text-textSecondary">${new Date(item.createdAt).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function updateSupportStatus(id, status) {
+            try {
+                const res = await fetch(`/api/admin/support/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ status })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to update support');
+                showToast('success', 'Support status updated');
+                await loadSupport();
+            } catch(e) { showToast('error', e.message); }
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const data = await res.json();
+                users = data.users || [];
+                renderUsers();
+                loadStats();
+            } catch(e) { showToast('error', 'Failed to load users'); }
+        }
+
+        function renderUsers() {
+            const query = document.getElementById('userSearch').value.toLowerCase().trim();
+            const list = document.getElementById('usersList');
+            const filtered = users.filter(user => {
+                const haystack = `${user.email} ${user.userId} ${user.customerId}`.toLowerCase();
+                return haystack.includes(query);
+            });
+
+            if (!filtered.length) {
+                list.innerHTML = '<div class="py-8 text-center text-textSecondary">No users found</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(user => `
+                <button type="button" class="w-full text-left p-4 hover:bg-surface/70 ${selectedUser && selectedUser.id === user.id ? 'bg-blue-50' : ''}" onclick="loadUserInfo('${encodeURIComponent(user.email)}')">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-medium text-text truncate">${escapeHtml(user.email)}</p>
+                            <p class="text-xs text-textSecondary truncate">${escapeHtml(user.userId)} · ${escapeHtml(user.customerId)}</p>
+                        </div>
+                        <div class="text-right text-xs text-textSecondary flex-shrink-0">
+                            <div>${user.albumCount} albums</div>
+                            <div>${user.videoCount} videos · ${user.pdfCount} PDFs</div>
+                        </div>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        async function loadUserInfo(encodedEmail) {
+            try {
+                const email = decodeURIComponent(encodedEmail);
+                const res = await fetch(`/api/admin/userinfo/${encodeURIComponent(email)}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load user');
+
+                selectedUserInfo = data;
+                selectedUser = data.user;
+                document.getElementById('userInfoEmpty').classList.add('hidden');
+                document.getElementById('userInfoDetail').classList.remove('hidden');
+                document.getElementById('detailEmail').textContent = data.user.email;
+                document.getElementById('detailUserId').textContent = data.user.userId;
+                document.getElementById('detailCustomerId').textContent = data.user.customerId;
+                document.getElementById('editUserEmail').value = data.user.email;
+                document.getElementById('editUserId').value = data.user.userId;
+                document.getElementById('editCustomerId').value = data.user.customerId;
+                document.getElementById('editUserNotes').value = data.user.notes || '';
+
+                const albumsEl = document.getElementById('detailAlbums');
+                albumsEl.innerHTML = data.albums.length ? data.albums.map(album => `
+                    <div class="p-3 rounded-xl bg-surface flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-text">${escapeHtml(album.albumId)}</p>
+                            <p class="text-xs text-textSecondary">${new Date(album.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div class="text-sm text-textSecondary">${album.videoCount} videos · ${album.pdfCount} PDFs</div>
+                    </div>
+                `).join('') : '<div class="text-textSecondary text-sm">No albums</div>';
+
+                const mediaEl = document.getElementById('detailMedia');
+                mediaEl.innerHTML = data.media.length ? data.media.map(item => `
+                    <div class="p-3 rounded-xl border border-border/60 flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-text">${escapeHtml(item.title)}</p>
+                            <p class="text-xs text-textSecondary">${escapeHtml(item.albumId)} · ${escapeHtml(item.size)}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium ${item.type === 'pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}">${item.type === 'pdf' ? 'PDF' : 'Video'}</span>
+                    </div>
+                `).join('') : '<div class="text-textSecondary text-sm">No files</div>';
+
+                renderUsers();
+            } catch(e) { showToast('error', e.message); }
+        }
+
+        document.getElementById('userSearch').addEventListener('input', renderUsers);
+        document.getElementById('albumSearch').addEventListener('input', renderAlbums);
+        document.getElementById('fileSearch').addEventListener('input', renderVideos);
+        document.getElementById('fileTypeFilter').addEventListener('change', renderVideos);
+        document.getElementById('refreshUsersBtn').addEventListener('click', loadUsers);
+        document.getElementById('saveUserBtn').addEventListener('click', () => {
+            if (!selectedUser) return;
+            openEditModal('user', selectedUser);
+        });
+
+        function editAlbumById(id) {
+            const album = adminAlbums.find(item => item.id === id);
+            if (album) openEditModal('album', album);
+        }
+
+        function editFileById(id) {
+            const file = adminVideos.find(item => item.id === id);
+            if (file) openEditModal('file', file);
+        }
+
+        function modalField(name, label, value, type = 'text', full = false) {
+            return `
+                <label class="block ${full ? 'col-span-2' : ''}">
+                    <span class="block text-sm font-medium text-text mb-2">${label}</span>
+                    ${type === 'textarea'
+                        ? `<textarea name="${name}" rows="3" class="w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">${escapeHtml(value)}</textarea>`
+                        : `<input name="${name}" type="${type}" value="${escapeHtml(value)}" class="w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary">`}
+                </label>
+            `;
+        }
+
+        function openEditModal(type, record) {
+            editContext = { type, record };
+            const title = document.getElementById('editModalTitle');
+            const subtitle = document.getElementById('editModalSubtitle');
+            const fields = document.getElementById('editModalFields');
+
+            if (type === 'album') {
+                title.textContent = 'Edit Album';
+                subtitle.textContent = 'Update album code, owner email and fixed IDs together';
+                fields.innerHTML = [
+                    modalField('albumId', 'Album ID', record.albumId),
+                    modalField('userEmail', 'User Email', record.fullEmail || record.userEmail, 'email'),
+                    modalField('userId', 'User ID', record.userId || ''),
+                    modalField('customerId', 'Customer ID', record.customerId || '')
+                ].join('');
+            } else if (type === 'file') {
+                title.textContent = 'Edit File';
+                subtitle.textContent = 'Rename the file or move it to another album';
+                fields.innerHTML = [
+                    modalField('title', 'File Title', record.title),
+                    modalField('albumId', 'Album ID', record.albumId)
+                ].join('');
+            } else {
+                title.textContent = 'Edit User';
+                subtitle.textContent = 'Change this user identity once and sync associated albums';
+                fields.innerHTML = [
+                    modalField('email', 'Email', record.email, 'email'),
+                    modalField('userId', 'User ID', record.userId || ''),
+                    modalField('customerId', 'Customer ID', record.customerId || ''),
+                    modalField('notes', 'Admin Notes', record.notes || '', 'textarea', true)
+                ].join('');
+            }
+
+            document.getElementById('editModal').classList.remove('hidden');
+            setTimeout(() => document.querySelector('#editModalFields input, #editModalFields textarea')?.focus(), 50);
+        }
+
+        function closeEditModal() {
+            editContext = null;
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+        document.getElementById('cancelEditModal').addEventListener('click', closeEditModal);
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target.id === 'editModal') closeEditModal();
+        });
+
+        document.getElementById('editModalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!editContext) return;
+            const form = new FormData(e.target);
+            const payload = Object.fromEntries(form.entries());
+            const btn = document.getElementById('saveEditModal');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                let endpoint = '';
+                if (editContext.type === 'album') endpoint = `/api/admin/albums/${editContext.record.id}`;
+                if (editContext.type === 'file') endpoint = `/api/admin/videos/${editContext.record.id}`;
+                if (editContext.type === 'user') endpoint = `/api/admin/users/${editContext.record.id}`;
+
+                const res = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to save changes');
+
+                showToast('success', data.message || 'Saved');
+                const previousUserEmail = editContext.type === 'user' ? payload.email : null;
+                closeEditModal();
+                await Promise.all([loadStats(), loadAlbums(), loadVideos(), loadUsers()]);
+                if (previousUserEmail) await loadUserInfo(encodeURIComponent(previousUserEmail));
+            } catch(err) {
+                showToast('error', err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            }
+        });
+
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/admin/settings');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load settings');
+                const settings = data.settings || {};
+                document.querySelectorAll('.settings-input').forEach(input => {
+                    const key = input.dataset.env;
+                    if (key === 'SMTP_PASS') {
+                        input.value = '';
+                        document.getElementById('smtpPassHint').textContent = settings.SMTP_PASS_MASKED ? `Current SMTP password: ${settings.SMTP_PASS_MASKED}` : 'No SMTP password saved';
+                    } else {
+                        input.value = settings[key] || '';
+                    }
+                });
+                document.getElementById('settingsUsers').textContent = data.system.users;
+                document.getElementById('settingsFiles').textContent = `${data.system.files} (${data.system.pdfs} PDFs)`;
+                document.getElementById('settingsStorage').textContent = data.system.uploadStorage;
+                document.getElementById('settingsUptime').textContent = formatDuration(data.system.uptimeSeconds);
+                document.getElementById('restartNotice').classList.add('hidden');
+            } catch(e) { showToast('error', e.message); }
+        }
+
+        document.getElementById('reloadSettingsBtn').addEventListener('click', loadSettings);
+        document.getElementById('openEnvBtn').addEventListener('click', () => {
+            showToast('success', '.env values are loaded in Settings');
+        });
+
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {};
+            document.querySelectorAll('.settings-input').forEach(input => {
+                payload[input.dataset.env] = input.value.trim();
+            });
+
+            const btn = document.getElementById('saveSettingsBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to save settings');
+                showToast('success', 'Settings saved');
+                await loadSettings();
+                if (data.restartRequired) {
+                    const notice = document.getElementById('restartNotice');
+                    notice.textContent = 'Saved to .env. Restart the server to apply port, session, environment, or upload size changes.';
+                    notice.classList.remove('hidden');
+                }
+            } catch(e) {
+                showToast('error', e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Settings';
+            }
+        });
+
+        document.getElementById('testEmailBtn').addEventListener('click', async () => {
+            const email = document.querySelector('[data-env="SMTP_USER"]').value.trim();
+            if (!email) { showToast('error', 'SMTP user email is required'); return; }
+            const btn = document.getElementById('testEmailBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            try {
+                const res = await fetch('/api/admin/settings/test-email', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Test email failed');
+                showToast('success', data.message);
+            } catch(e) {
+                showToast('error', e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Test';
+            }
+        });
+
+        // File upload
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('videoFile');
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-primary'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-primary'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+        function handleFile(file) {
+            const isAllowed = file.type === 'video/mp4' || file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            if (!isAllowed) { showToast('error', 'Only MP4 or PDF files allowed'); return; }
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('filePreview').classList.remove('hidden');
+            dropZone.classList.add('hidden');
+            if (!document.getElementById('videoTitle').value) document.getElementById('videoTitle').value = file.name.replace(/\.(mp4|pdf)$/i,'');
+        }
+
+        document.getElementById('removeFile').addEventListener('click', () => {
+            selectedFile = null; fileInput.value = '';
+            document.getElementById('filePreview').classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedFile) { showToast('error', 'Please select a file'); return; }
+
+            const formData = new FormData();
+            formData.append('media', selectedFile);
+            formData.append('albumId', document.getElementById('albumId').value.trim());
+            formData.append('userEmail', document.getElementById('userEmail').value.trim());
+            formData.append('userId', document.getElementById('userId').value.trim());
+            formData.append('customerId', document.getElementById('customerId').value.trim());
+            formData.append('title', document.getElementById('videoTitle').value.trim() || selectedFile.name);
+
+            const btn = document.getElementById('uploadBtn');
+            btn.querySelector('.btn-text').classList.add('hidden');
+            btn.querySelector('.btn-loader').classList.remove('hidden');
+            btn.disabled = true;
+            document.querySelector('.progress').classList.remove('hidden');
+
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.withCredentials = true;
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) document.getElementById('progressBar').style.width = Math.round((e.loaded/e.total)*100) + '%';
+                });
+                xhr.addEventListener('load', () => {
+                    const res = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200 && res.success) {
+                        showToast('success', 'File uploaded!');
+                        resetUpload();
+                        loadStats();
+                    } else {
+                        showToast('error', res.error || 'Upload failed');
+                        if (xhr.status === 401) setTimeout(() => location.reload(), 2000);
+                    }
+                });
+                xhr.addEventListener('error', () => showToast('error', 'Connection error'));
+                xhr.open('POST', '/api/admin/upload');
+                xhr.send(formData);
+            } catch(e) { showToast('error', e.message); }
+        });
+
+        function resetUpload() {
+            document.getElementById('uploadForm').reset();
+            selectedFile = null; fileInput.value = '';
+            document.getElementById('filePreview').classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            document.querySelector('.progress').classList.add('hidden');
+            document.getElementById('progressBar').style.width = '0%';
+            const btn = document.getElementById('uploadBtn');
+            btn.querySelector('.btn-text').classList.remove('hidden');
+            btn.querySelector('.btn-loader').classList.add('hidden');
+            btn.disabled = false;
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', resetUpload);
+
+        // Delete
+        function confirmDelete(type, id, name) {
+            deleteTarget = {type, id};
+            document.getElementById('deleteMessage').textContent = type === 'album' 
+                ? `Delete album "${name}" and all its files?` 
+                : `Delete file "${name}"?`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            document.getElementById('deleteModal').classList.add('hidden');
+            deleteTarget = null;
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', async () => {
+            if (!deleteTarget) return;
+            try {
+                const endpoint = deleteTarget.type === 'album' ? `/api/admin/albums/${deleteTarget.id}` : `/api/admin/videos/${deleteTarget.id}`;
+                const res = await fetch(endpoint, {method: 'DELETE'});
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('success', 'Deleted');
+                    document.getElementById('deleteModal').classList.add('hidden');
+                    if (deleteTarget.type === 'album') loadAlbums(); else loadVideos();
+                    loadStats();
+                } else showToast('error', data.error || 'Delete failed');
+            } catch(e) { showToast('error', e.message); }
+        });
+
+        function showToast(type, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.className = `fixed top-4 right-4 px-4 py-3 rounded-xl shadow-lg fade-in z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024; const sizes = ['Bytes','KB','MB','GB'];
+            const i = Math.floor(Math.log(bytes)/Math.log(k));
+            return parseFloat((bytes/Math.pow(k,i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const hrs = Math.floor(mins / 60);
+            if (hrs > 0) return `${hrs}h ${mins % 60}m`;
+            if (mins > 0) return `${mins}m ${seconds % 60}s`;
+            return `${seconds}s`;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

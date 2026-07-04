@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOA | My Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#007AFF', surface: '#F5F5F7', border: '#D2D2D7', text: '#1D1D1F', textSecondary: '#6E6E73' }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --soa-ink: #08111f;
+            --soa-line: rgba(15, 23, 42, 0.1);
+            --soa-cyan: #00a7c7;
+            --soa-gold: #b8892f;
+        }
+
+        * { letter-spacing: 0; }
+
+        body {
+            background:
+                linear-gradient(120deg, rgba(8,17,31,0.96) 0%, rgba(15,23,42,0.92) 30%, rgba(238,243,246,1) 30%, rgba(248,250,252,1) 100%) !important;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(90deg, #000 0%, transparent 62%);
+        }
+
+        .rounded-2xl, .rounded-xl { border-radius: 8px !important; }
+        .bg-white {
+            background: rgba(255,255,255,0.92) !important;
+            border: 1px solid rgba(255,255,255,0.72);
+            box-shadow: 0 20px 60px rgba(8,17,31,0.12) !important;
+            backdrop-filter: blur(18px);
+        }
+        input:focus {
+            border-color: var(--soa-cyan) !important;
+            box-shadow: 0 0 0 4px rgba(0,167,199,0.12);
+        }
+        button, a { transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
+        button:hover, a:hover { transform: translateY(-1px); }
+        #sendInfoLinkBtn {
+            background: linear-gradient(135deg, #08111f 0%, #123c4b 62%, #b8892f 170%) !important;
+            box-shadow: 0 14px 34px rgba(8,17,31,0.22);
+        }
+        main { position: relative; z-index: 1; }
+
+        @media (max-width: 780px) {
+            body {
+                background:
+                    linear-gradient(180deg, rgba(8,17,31,0.98) 0%, rgba(15,23,42,0.94) 24%, rgba(238,243,246,1) 24%, rgba(248,250,252,1) 100%) !important;
+            }
+            main { padding-top: 24px !important; }
+            main > .flex:first-child a:first-child { color: #fff; }
+            .grid-cols-4, .grid-cols-12 { grid-template-columns: 1fr !important; }
+            .col-span-5, .col-span-7 { grid-column: span 1 / span 1 !important; }
+            #infoPanel .flex.items-start { align-items: flex-start; }
+            #infoPanel .flex.gap-2 { width: 100%; flex-wrap: wrap; }
+            #infoPanel .flex.gap-2 > * { flex: 1; text-align: center; }
+        }
+    </style>
+</head>
+<body class="bg-surface min-h-screen font-sans text-text">
+    <main class="max-w-5xl mx-auto px-4 py-10">
+        <div class="flex items-center justify-between mb-8">
+            <a href="/" class="font-semibold text-text">SOA | Secure Online Album</a>
+            <a href="/" class="text-sm text-textSecondary hover:text-primary">Album Login</a>
+        </div>
+
+        <section id="requestPanel" class="bg-white rounded-2xl shadow-sm p-8 max-w-xl mx-auto">
+            <h1 class="text-2xl font-semibold mb-2">Check Your Info</h1>
+            <p class="text-textSecondary mb-6">Enter your email and we will send a secure link to view your User ID, Customer ID, albums and files.</p>
+            <form id="infoRequestForm" class="space-y-4">
+                <input id="infoEmail" type="email" required class="w-full px-4 py-3 rounded-xl border border-border outline-none focus:border-primary" placeholder="your@email.com">
+                <button id="sendInfoLinkBtn" class="w-full py-3 rounded-xl bg-primary text-white font-medium">Send Verification Link</button>
+            </form>
+            <div id="requestMessage" class="hidden mt-4 p-3 rounded-xl text-sm"></div>
+        </section>
+
+        <section id="loadingPanel" class="hidden bg-white rounded-2xl shadow-sm p-8 max-w-xl mx-auto text-center">
+            <div class="mx-auto mb-4 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+            <p class="text-textSecondary">Verifying secure link...</p>
+        </section>
+
+        <section id="infoPanel" class="hidden">
+            <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-semibold" id="userEmail">-</h1>
+                        <p class="text-textSecondary mt-1">User ID: <span id="userId">-</span> · Customer ID: <span id="customerId">-</span></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportMyInfo()" class="px-4 py-2 rounded-xl border border-border text-textSecondary hover:bg-surface">Export CSV</button>
+                        <button onclick="window.print()" class="px-4 py-2 rounded-xl border border-border text-textSecondary hover:bg-surface">Print</button>
+                        <a href="/" class="px-4 py-2 rounded-xl border border-border text-textSecondary hover:bg-surface">Open Albums</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold" id="albumCount">0</div><div class="text-sm text-textSecondary">Albums</div></div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold" id="fileCount">0</div><div class="text-sm text-textSecondary">Files</div></div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold" id="videoCount">0</div><div class="text-sm text-textSecondary">Videos</div></div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm"><div class="text-2xl font-semibold" id="pdfCount">0</div><div class="text-sm text-textSecondary">PDF Albums</div></div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-5 bg-white rounded-2xl shadow-sm p-6">
+                    <h2 class="font-semibold mb-4">Albums</h2>
+                    <div id="albumsList" class="space-y-2"></div>
+                </div>
+                <div class="col-span-7 bg-white rounded-2xl shadow-sm p-6">
+                    <h2 class="font-semibold mb-4">Files</h2>
+                    <div id="filesList" class="space-y-2"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        let currentInfo = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (token) {
+                document.getElementById('requestPanel').classList.add('hidden');
+                document.getElementById('loadingPanel').classList.remove('hidden');
+                await verifyToken(token);
+                return;
+            }
+            tryLoadInfo();
+        });
+
+        document.getElementById('infoRequestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('infoEmail').value.trim();
+            const btn = document.getElementById('sendInfoLinkBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            try {
+                const res = await fetch('/api/info/request', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                showMessage(res.ok ? 'success' : 'error', data.message || data.error || 'Request failed');
+            } catch (error) {
+                showMessage('error', 'Failed to send verification link');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Verification Link';
+            }
+        });
+
+        async function verifyToken(token) {
+            try {
+                const res = await fetch(`/api/info/verify/${encodeURIComponent(token)}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Verification failed');
+                window.history.replaceState({}, '', '/info');
+                await loadInfo();
+            } catch (error) {
+                document.getElementById('loadingPanel').classList.add('hidden');
+                document.getElementById('requestPanel').classList.remove('hidden');
+                showMessage('error', error.message);
+            }
+        }
+
+        async function tryLoadInfo() {
+            const res = await fetch('/api/info/me');
+            if (res.ok) renderInfo(await res.json());
+        }
+
+        async function loadInfo() {
+            const res = await fetch('/api/info/me');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load info');
+            renderInfo(data);
+        }
+
+        function renderInfo(data) {
+            currentInfo = data;
+            document.getElementById('loadingPanel').classList.add('hidden');
+            document.getElementById('requestPanel').classList.add('hidden');
+            document.getElementById('infoPanel').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = data.user.email;
+            document.getElementById('userId').textContent = data.user.userId;
+            document.getElementById('customerId').textContent = data.user.customerId;
+            document.getElementById('albumCount').textContent = data.summary.albums;
+            document.getElementById('fileCount').textContent = data.summary.files;
+            document.getElementById('videoCount').textContent = data.summary.videos;
+            document.getElementById('pdfCount').textContent = data.summary.pdfs;
+            document.getElementById('albumsList').innerHTML = data.albums.map(album => `
+                <div class="p-3 rounded-xl bg-surface">
+                    <div class="font-medium">${escapeHtml(album.albumId)}</div>
+                    <div class="text-sm text-textSecondary">${album.videoCount} videos · ${album.pdfCount} PDFs</div>
+                </div>
+            `).join('') || '<p class="text-textSecondary">No albums found</p>';
+            document.getElementById('filesList').innerHTML = data.media.map(file => `
+                <div class="p-3 rounded-xl border border-border flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-medium">${escapeHtml(file.title)}</div>
+                        <div class="text-sm text-textSecondary">${escapeHtml(file.albumId)} · ${escapeHtml(file.size)}</div>
+                    </div>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${file.type === 'pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}">${file.type === 'pdf' ? 'PDF' : 'Video'}</span>
+                </div>
+            `).join('') || '<p class="text-textSecondary">No files found</p>';
+        }
+
+        function showMessage(type, message) {
+            const el = document.getElementById('requestMessage');
+            el.textContent = message;
+            el.className = `mt-4 p-3 rounded-xl text-sm ${type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`;
+            el.classList.remove('hidden');
+        }
+
+        function exportMyInfo() {
+            if (!currentInfo) return;
+            const rows = [
+                ['Email', currentInfo.user.email],
+                ['User ID', currentInfo.user.userId],
+                ['Customer ID', currentInfo.user.customerId],
+                ['Albums', currentInfo.summary.albums],
+                ['Files', currentInfo.summary.files],
+                [],
+                ['Album ID', 'Videos', 'PDFs'],
+                ...currentInfo.albums.map(album => [album.albumId, album.videoCount, album.pdfCount]),
+                [],
+                ['File Title', 'Type', 'Album ID', 'Size'],
+                ...currentInfo.media.map(file => [file.title, file.type, file.albumId, file.size])
+            ];
+            const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'soa-my-info.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
